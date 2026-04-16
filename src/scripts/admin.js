@@ -424,37 +424,27 @@ function getCurrentPrimaryColor() {
   );
 }
 
-function getAppBaseHref() {
-  const envBase =
-    typeof import.meta !== "undefined" && import.meta.env
-      ? import.meta.env.BASE_URL
-      : null;
-  if (envBase && envBase !== "/")
-    return envBase.endsWith("/") ? envBase : `${envBase}/`;
-  const baseTag = document.querySelector("base");
-  const href = baseTag?.getAttribute("href");
-  if (href && href !== "/") return href.endsWith("/") ? href : `${href}/`;
-  const path = window.location.pathname;
-  const parts = path.split("/").filter(Boolean);
-  if (!parts.length) return "/";
-  const last = parts[parts.length - 1];
-  if (last.includes(".")) parts.pop();
-  return parts.length ? `/${parts.join("/")}/` : "/";
-}
-
-const BASE_HREF = getAppBaseHref();
+const APP_BASE_URL = new URL("../", import.meta.url);
 
 function assetUrl(path) {
   const clean = String(path || "").replace(/^\//, "");
-  return new URL(clean, window.location.origin + BASE_HREF).toString();
+  return new URL(clean, APP_BASE_URL).toString();
 }
 
 function menuUrlFromSlug(slug) {
   const clean = safeText(slug).trim().replace(/^\//, "");
   if (!clean) return "";
-  const baseUrl = new URL(BASE_HREF, window.location.origin);
+  const baseUrl = new URL(APP_BASE_URL);
   baseUrl.searchParams.set("cliente", clean);
   return baseUrl.toString();
+}
+
+function normalizeAdminAssetUrl(url) {
+  const clean = safeText(url).trim();
+  if (!clean) return "";
+  if (/^(?:[a-z]+:)?\/\//i.test(clean)) return clean;
+  if (/^(data|blob|mailto|tel):/i.test(clean)) return clean;
+  return assetUrl(clean);
 }
 
 function showPreview(el, url) {
@@ -465,7 +455,8 @@ function showPreview(el, url) {
     return;
   }
   el.style.display = "";
-  el.innerHTML = `<img src="${url}" alt="preview" style="max-width:100%;border-radius:12px;display:block" onerror="this.style.display='none';this.parentElement.style.background='transparent'"/>`;
+  const normalized = normalizeAdminAssetUrl(url);
+  el.innerHTML = `<img src="${normalized}" alt="preview" style="max-width:100%;border-radius:12px;display:block" onerror="this.style.display='none';this.parentElement.style.background='transparent'"/>`;
 }
 
 function syncModalBodyLock() {

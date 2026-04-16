@@ -289,32 +289,11 @@ function formatPrice(v) {
   return `${n.toFixed(2)} \u20AC`;
 }
 
-const BASE_HREF = (() => {
-  const envBase =
-    typeof import.meta !== "undefined" && import.meta.env
-      ? import.meta.env.BASE_URL
-      : null;
-  if (envBase && envBase !== "/")
-    return envBase.endsWith("/") ? envBase : `${envBase}/`;
-  const baseTag = document.querySelector("base");
-  const href = baseTag?.getAttribute("href");
-  if (href && href !== "/") return href.endsWith("/") ? href : `${href}/`;
-  const path = window.location.pathname;
-  const parts = path.split("/").filter(Boolean);
-  if (!parts.length) return "/";
-  const last = parts[parts.length - 1];
-  if (last.includes(".")) parts.pop();
-  if (parts[parts.length - 1]?.toLowerCase() === "menu") parts.pop();
-  if (parts.length && !parts[parts.length - 1].includes(".")) {
-    const maybeSlug = parts[parts.length - 1];
-    if (maybeSlug && maybeSlug !== "index") parts.pop();
-  }
-  return parts.length ? `/${parts.join("/")}/` : "/";
-})();
+const APP_BASE_URL = new URL("../", import.meta.url);
 
 function baseUrl(path) {
   const clean = String(path || "").replace(/^\//, "");
-  return new URL(clean, window.location.origin + BASE_HREF).toString();
+  return new URL(clean, APP_BASE_URL).toString();
 }
 
 function normalizeAllergenKey(v) {
@@ -397,7 +376,9 @@ function normalizeOptionalUrl(value) {
   if (!url) return "";
   const raw = url.toLowerCase();
   if (raw === "null" || raw === "undefined" || raw === "nan") return "";
-  return url;
+  if (/^(?:[a-z]+:)?\/\//i.test(url)) return url;
+  if (/^(data|blob|mailto|tel):/i.test(url)) return url;
+  return baseUrl(url);
 }
 
 function parseCategoryIds(rawValue) {
