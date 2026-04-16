@@ -709,21 +709,8 @@ h1 svg {
     display: none;
 }
 .tab-content.active {
-    position: relative;
     display: block;
     animation: fadeUp 0.18s ease;
-}
-
-.tab-content.active::before {
-    content: "";
-    position: absolute;
-    top: -2px;
-    left: 0;
-    right: 0;
-    height: 1px;
-    pointer-events: none;
-    z-index: 2;
-    background: linear-gradient(90deg, var(--accent-soft), rgba(0, 0, 0, 0));
 }
 
 @keyframes fadeUp {
@@ -1712,9 +1699,28 @@ h1 svg {
 }
 
 .admin-shell {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.admin-shell::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    left: 0;
+    right: 0;
+    height: 120px;
+    pointer-events: none;
+    background: linear-gradient(180deg, var(--accent-soft-alt), transparent 75%);
+    border-radius: 18px;
+    z-index: 0;
+}
+
+.admin-shell > * {
+    position: relative;
+    z-index: 1;
 }
 
 .admin-tab-stack {
@@ -1727,13 +1733,12 @@ h1 svg {
 .admin-tab-stack::before {
     content: "";
     position: absolute;
-    top: -6px;
+    top: -2px;
     left: 0;
     right: 0;
-    height: 120px;
+    height: 1px;
     pointer-events: none;
-    background: linear-gradient(180deg, var(--accent-soft-alt), transparent 75%);
-    border-radius: 18px;
+    background: linear-gradient(90deg, var(--accent-soft), rgba(0, 0, 0, 0));
     z-index: 0;
 }
 
