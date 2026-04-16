@@ -1735,7 +1735,7 @@ h1 svg {
     gap: 14px;
     padding: 12px 14px 10px;
     margin-bottom: 0;
-    background: linear-gradient(180deg, var(--accent-soft-alt), rgba(0, 0, 0, 0) 78%), #101317;
+    background: linear-gradient(180deg, var(--accent-soft-alt) 0%, rgba(0, 0, 0, 0) 100%);
     border: 1px solid var(--border);
     border-bottom: 0;
     border-radius: 18px 18px 0 0;
