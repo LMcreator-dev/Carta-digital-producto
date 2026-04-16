@@ -634,7 +634,7 @@ function applySlugFields(slugValue) {
   return normalized;
 }
 
-let sharedIServicesSlugCache = "";
+let sharedGlobalSlugCache = "";
 let sharedCuentaIdCache = "";
 let sharedAdminAccentCache = "";
 let sharedAdminModeCache = MENU_THEME_MODE_DARK;
@@ -872,12 +872,12 @@ async function loadCoreBusinessData(cuentaId) {
   }
 }
 
-async function resolveSharedIServicesSlug(userId, { force = false } = {}) {
+async function resolveSharedGlobalSlug(userId, { force = false } = {}) {
   const uid = safeText(userId).trim();
   if (!uid) return "";
-  if (!force && sharedIServicesSlugCache) return sharedIServicesSlugCache;
+  if (!force && sharedGlobalSlugCache) return sharedGlobalSlugCache;
 
-  // 1) Fuente principal: iCalendar.Perfil.slug (global iServices actual).
+  // 1) Fuente principal: iCalendar.Perfil.slug (slug global de la cuenta).
   try {
     const { data } = await dbIcalendar
       .from("Perfil")
@@ -887,7 +887,7 @@ async function resolveSharedIServicesSlug(userId, { force = false } = {}) {
       .maybeSingle();
     const slug = normalizeSlug(data?.slug);
     if (slug) {
-      sharedIServicesSlugCache = slug;
+      sharedGlobalSlugCache = slug;
       return slug;
     }
   } catch {}
@@ -906,13 +906,13 @@ async function resolveSharedIServicesSlug(userId, { force = false } = {}) {
     if (cuentaId) {
       const { data: cuenta } = await dbCore
         .from("cuentas")
-        .select("slug")
-        .eq("id", cuentaId)
-        .limit(1)
-        .maybeSingle();
+      .select("slug")
+      .eq("id", cuentaId)
+      .limit(1)
+      .maybeSingle();
       const slug = normalizeSlug(cuenta?.slug);
       if (slug) {
-        sharedIServicesSlugCache = slug;
+        sharedGlobalSlugCache = slug;
         return slug;
       }
     }
@@ -928,12 +928,12 @@ async function resolveSharedIServicesSlug(userId, { force = false } = {}) {
       .maybeSingle();
     const slug = normalizeSlug(data?.slug);
     if (slug) {
-      sharedIServicesSlugCache = slug;
+      sharedGlobalSlugCache = slug;
       return slug;
     }
   } catch {}
 
-  sharedIServicesSlugCache = "";
+  sharedGlobalSlugCache = "";
   return "";
 }
 
@@ -1989,7 +1989,7 @@ document.querySelectorAll(".tab").forEach((tab) => {
 
 // ========== PERFIL ==========
 async function cargarPerfil() {
-  const sharedSlug = await resolveSharedIServicesSlug(user?.id);
+  const sharedSlug = await resolveSharedGlobalSlug(user?.id);
   const adminAccent = await resolveAdminAccentColor(user?.id, { force: false });
 
   const { data, error } = await db
@@ -2150,7 +2150,7 @@ assetGalleryUploadBtn?.addEventListener("click", async () => {
 document.getElementById("guardarPerfilBtn").onclick = async () => {
   try {
     const currentUser = await requireUser();
-    const sharedSlug = await resolveSharedIServicesSlug(currentUser.id, {
+    const sharedSlug = await resolveSharedGlobalSlug(currentUser.id, {
       force: true,
     });
     const slugToPersist = normalizeSlug(perfilSlug?.value || sharedSlug);
