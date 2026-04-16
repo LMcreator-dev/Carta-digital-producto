@@ -1714,13 +1714,19 @@ h1 svg {
 .admin-tab-stack::before {
     content: "";
     position: absolute;
-    top: -6px;
-    left: 0;
-    right: 0;
+    top: -10px;
+    left: -8px;
+    right: auto;
+    width: min(420px, 46vw);
     height: 120px;
     pointer-events: none;
-    background: linear-gradient(180deg, var(--accent-soft-alt), transparent 75%);
+    background: radial-gradient(
+        130% 130% at 0% 0%,
+        var(--accent-soft-alt) 0%,
+        rgba(0, 0, 0, 0) 72%
+    );
     border-radius: 18px;
+    opacity: 0.9;
     z-index: 0;
 }
 
