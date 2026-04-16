@@ -697,10 +697,6 @@ h1 svg {
     box-shadow: 0 8px 18px var(--accent-shadow);
 }
 
-.tab:hover {
-   
-}
-
 .tab-content {
     display: none;
 }
@@ -1718,7 +1714,7 @@ h1 svg {
     border: 1px solid var(--border);
     border-top: 0;
     border-radius: 0 0 18px 18px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.015), rgba(255, 255, 255, 0) 45%);
+    background: transparent;
     padding: 14px;
 }
 
