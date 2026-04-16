@@ -1797,15 +1797,6 @@ h1 svg {
     min-width: 0;
 }
 
-.admin-page__sidebar--ghost {
-    pointer-events: none;
-}
-
-.admin-page__sidebar--ghost > .form-box {
-    visibility: hidden;
-    min-height: 1px;
-}
-
 .admin-page .form-box,
 .content-card {
     background: rgba(28, 28, 28, 0.96);
@@ -3001,10 +2992,6 @@ h1 svg {
 
     .admin-sticky-card {
         position: static;
-    }
-
-    .admin-page__sidebar--ghost {
-        display: none;
     }
 }
 
