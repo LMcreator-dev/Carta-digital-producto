@@ -292,6 +292,10 @@ const menuDishPickerDoneBtn = document.getElementById("menuDishPickerDoneBtn");
 // PLATOS (toolbar)
 const platosCategoriaFilter = document.getElementById("platosCategoriaFilter");
 const platosSearch = document.getElementById("platosSearch");
+const tabPlatos = document.getElementById("tab-platos");
+const platoEditorCard = tabPlatos?.querySelector(
+  ".admin-page__sidebar .form-box",
+);
 const PROFILE_MEDIA_TARGETS = {
   portada: {
     label: "Portada principal",
@@ -2482,6 +2486,28 @@ function resetPlatoForm() {
   if (platoEditAsideBody) platoEditAsideBody.innerHTML = "";
 }
 
+function scrollToPlatoEditorIfNeeded() {
+  if (!window.matchMedia("(max-width: 1180px)").matches) return;
+
+  const target =
+    platoEditorCard instanceof HTMLElement
+      ? platoEditorCard
+      : platoFormTitle instanceof HTMLElement
+        ? platoFormTitle
+        : tabPlatos instanceof HTMLElement
+          ? tabPlatos
+          : null;
+  if (!target) return;
+
+  const prefersReducedMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  target.scrollIntoView({
+    behavior: prefersReducedMotion ? "auto" : "smooth",
+    block: "start",
+  });
+}
+
 addCategoriaSubcategoriaBtn?.addEventListener("click", addCategoriaSubcategoria);
 categoriaSubcategoriaNombre?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter") return;
@@ -2707,6 +2733,7 @@ function editarPlato(id) {
 
   platoFormTitle.textContent = "Editar plato";
   cancelPlatoBtn.style.display = "";
+  scrollToPlatoEditorIfNeeded();
 }
 
 async function togglePlato(id) {
