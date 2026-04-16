@@ -2430,11 +2430,12 @@ function renderPlatosList(platos) {
     const div = document.createElement("div");
     div.className = "plato-item" + (p.activo ? "" : " inactiva");
     div.dataset.id = p.id;
+    const normalizedDishImage = normalizeAdminAssetUrl(p.imagen_url || "");
 
-    const img = p.imagen_url
+    const img = normalizedDishImage
       ? `
         <div class="plato-thumb">
-          <img src="${p.imagen_url}" alt="" onerror="this.style.display='none';this.parentElement.classList.add('plato-thumb--empty')"/>
+          <img src="${normalizedDishImage}" alt="" onerror="this.style.display='none';this.parentElement.classList.add('plato-thumb--empty')"/>
         </div>
       `
       : '<div class="plato-thumb plato-thumb--empty"></div>';
@@ -2526,8 +2527,9 @@ function editarPlato(id) {
     const catNames = getPlatoCategoryIds(p)
       .map((id) => categoriaNombreById(id))
       .filter(Boolean);
-    const thumb = p.imagen_url
-      ? `<img class="edit-aside-thumb" src="${p.imagen_url}" alt="" onerror="this.style.display='none';this.parentElement.style.background='transparent'">`
+    const normalizedEditImage = normalizeAdminAssetUrl(p.imagen_url || "");
+    const thumb = normalizedEditImage
+      ? `<img class="edit-aside-thumb" src="${normalizedEditImage}" alt="" onerror="this.style.display='none';this.parentElement.style.background='transparent'">`
       : `<div class="edit-aside-thumb"></div>`;
 
     const tags = [];

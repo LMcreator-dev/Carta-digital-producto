@@ -1,6 +1,5 @@
 ﻿---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import AdminHeader from "../components/admin/AdminHeader.astro";
 import AdminLogin from "../components/admin/AdminLogin.astro";
 import AdminPanel from "../components/admin/AdminPanel.astro";
 import AdminPlaceIdModal from "../components/admin/AdminPlaceIdModal.astro";
@@ -11,7 +10,6 @@ import adminScriptUrl from "../scripts/admin.js?url";
 
 <BaseLayout title="CartaDigitalLM | Administración">
   <div class="admin-container">
-    <AdminHeader />
     <AdminLogin />
     <AdminPanel />
   </div>
