@@ -1743,7 +1743,7 @@ h1 svg {
     gap: 8px;
     min-height: 42px;
     padding: 10px 16px;
-    background: #121519;
+    background: transparent;
     border: 0;
     border-radius: 14px;
     color: #d3d5db;
@@ -1755,13 +1755,14 @@ h1 svg {
 }
 
 .admin-tabs .tab:hover {
-    background: #1a1f25;
+    background: transparent;
     color: #ffffff;
+    box-shadow: none;
 }
 
 .admin-tabs .tab.active {
     color: var(--accent-ui);
-    background: #1d242b;
+    background: transparent;
     border: 0;
     box-shadow: none;
 }
