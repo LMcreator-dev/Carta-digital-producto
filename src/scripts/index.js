@@ -3,13 +3,13 @@
 // =============================
 // Supabase (usa tus credenciales actuales)
 // =============================
-const supabaseUrl = "https://qozzxdrjwjskmwmxscqj.supabase.co";
+const supabaseUrl = "https://tdeyzdaocphjopxrwykj.supabase.co";
 const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFvenp4ZHJqd2pza213bXhzY3FqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjU5ODkyNjgsImV4cCI6MjA4MTU2NTI2OH0.3C_4cTXacx0Gf8eRtBYp2uaNZ61OE4SEEOUTDSW4P98";
+  "sb_publishable_LQrgEx8EeVDW2ExtHKgLsQ_OoOIwv-g";
 const supabase = createClient(supabaseUrl, supabaseKey);
 window.imenuPublic = { supabase };
 
-const db = supabase.schema("iMenu");
+const db = supabase.schema("CartaDigitalLM");
 const params = new URLSearchParams(window.location.search);
 
 function getPathClienteParam() {
