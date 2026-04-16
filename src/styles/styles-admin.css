@@ -1706,16 +1706,7 @@ h1 svg {
 }
 
 .admin-shell::before {
-    content: "";
-    position: absolute;
-    top: -6px;
-    left: 0;
-    right: 0;
-    height: 120px;
-    pointer-events: none;
-    background: linear-gradient(180deg, var(--accent-soft-alt), transparent 75%);
-    border-radius: 18px;
-    z-index: 0;
+    content: none;
 }
 
 .admin-shell > * {
@@ -1731,15 +1722,7 @@ h1 svg {
 }
 
 .admin-tab-stack::before {
-    content: "";
-    position: absolute;
-    top: -2px;
-    left: 0;
-    right: 0;
-    height: 1px;
-    pointer-events: none;
-    background: linear-gradient(90deg, var(--accent-soft), rgba(0, 0, 0, 0));
-    z-index: 0;
+    content: none;
 }
 
 .admin-tab-stack > .tab-content {
@@ -1753,7 +1736,7 @@ h1 svg {
     margin-bottom: 0;
     background: transparent;
     border: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 0;
     border-radius: 0;
     overflow-x: auto;
 }
