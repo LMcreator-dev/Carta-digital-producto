@@ -1743,8 +1743,8 @@ h1 svg {
     gap: 8px;
     min-height: 42px;
     padding: 10px 16px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0));
-    border: 1px solid transparent;
+    background: #121519;
+    border: 0;
     border-radius: 14px;
     color: #d3d5db;
     font-size: 15px;
@@ -1755,15 +1755,15 @@ h1 svg {
 }
 
 .admin-tabs .tab:hover {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015));
+    background: #1a1f25;
     color: #ffffff;
 }
 
 .admin-tabs .tab.active {
     color: var(--accent-ui);
-    background: linear-gradient(180deg, var(--accent-soft-alt), rgba(255, 255, 255, 0.03));
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+    background: #1d242b;
+    border: 0;
+    box-shadow: none;
 }
 
 .tab-icon {
