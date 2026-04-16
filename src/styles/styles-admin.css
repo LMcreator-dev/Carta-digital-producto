@@ -2165,10 +2165,10 @@ h1 svg {
 
 .appearance-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 360px));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 16px;
     align-items: start;
-    justify-content: start;
+    justify-content: stretch;
 }
 
 .appearance-grid__picker {
@@ -2176,6 +2176,38 @@ h1 svg {
     border-radius: 14px;
     padding: 12px;
     background: rgba(255, 255, 255, 0.02);
+    min-width: 0;
+}
+
+.appearance-grid__picker--admin-color {
+    order: 1;
+}
+
+.appearance-grid__picker--admin-theme {
+    order: 2;
+}
+
+.appearance-grid__picker--menu-color {
+    order: 3;
+}
+
+.appearance-grid__picker--menu-theme {
+    order: 4;
+}
+
+.appearance-grid__picker--logo {
+    order: 5;
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 940px) {
+    .appearance-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .appearance-grid__picker--logo {
+        grid-column: auto;
+    }
 }
 
 .logo-bg-controls {
