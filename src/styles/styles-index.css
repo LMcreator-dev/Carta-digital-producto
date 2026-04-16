@@ -187,6 +187,79 @@ button:active,
 .homeBody{padding:18px 18px 22px}
 .placeTitle{margin:2px 0 12px; font-size:30px; letter-spacing:-.02em}
 
+.homeMenus {
+  margin:2px 0 16px;
+}
+
+.homeMenusTitle {
+  margin:0 0 10px;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--accent);
+}
+
+.homeMenusList {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.homeMenuCard {
+  width:100%;
+  border:var(--frame-width) solid var(--frame-border);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.78)),
+    var(--surface);
+  border-radius:20px;
+  padding:14px 14px;
+  text-align:left;
+  box-shadow:
+    0 0 0 calc(var(--frame-ring-width) * .5) var(--frame-ring),
+    0 8px 22px rgba(0,0,0,.08);
+}
+
+.homeMenuName {
+  font-size:18px;
+  font-weight:900;
+  color:var(--text);
+}
+
+.homeMenuDesc {
+  margin-top:6px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.35;
+}
+
+.homeMenuMeta {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:12px;
+}
+
+.homeMenuMetaPill {
+  display:inline-flex;
+  align-items:center;
+  min-height:28px;
+  padding:0 10px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.72);
+  color:var(--text);
+  font-size:12px;
+  font-weight:800;
+}
+
+.homeMenuAction {
+  margin-top:12px;
+  color:var(--accent);
+  font-weight:900;
+  font-size:13px;
+}
+
 .homeInfo{
   display:grid;
   grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
@@ -579,6 +652,123 @@ button:active,
   font-weight:900;
   background:#111;
   color:#fff;
+}
+
+.sheetHeader--menu {
+  text-align:left;
+}
+
+.sheetHeaderEyebrow {
+  font-size:12px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--accent);
+  font-weight:900;
+  margin-bottom:6px;
+}
+
+.sheetHeaderSub {
+  margin-top:8px;
+  color:var(--muted);
+  line-height:1.4;
+}
+
+.menuSheetMeta {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+
+.menuSheetMetaPill {
+  display:inline-flex;
+  align-items:center;
+  min-height:30px;
+  padding:0 12px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--surface);
+  font-size:12px;
+  font-weight:800;
+  color:var(--text);
+}
+
+.menuSheetFields {
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-top:16px;
+}
+
+.menuSheetField {
+  border:1px solid var(--line);
+  border-radius:18px;
+  overflow:hidden;
+  background:var(--surface);
+}
+
+.menuSheetFieldHead {
+  padding:14px 16px 12px;
+  border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(31,31,31,.03), transparent);
+}
+
+.menuSheetFieldTitle {
+  font-size:17px;
+  font-weight:900;
+  color:var(--text);
+}
+
+.menuSheetFieldDesc {
+  margin-top:6px;
+  color:var(--muted);
+  line-height:1.35;
+}
+
+.menuSheetDishList {
+  display:flex;
+  flex-direction:column;
+}
+
+.menuSheetDishRow {
+  display:grid;
+  grid-template-columns:minmax(0, 1fr) auto;
+  gap:12px;
+  align-items:start;
+  padding:14px 16px;
+  border-top:1px solid var(--line);
+}
+
+.menuSheetDishRow:first-child {
+  border-top:0;
+}
+
+.menuSheetDishMain {
+  min-width:0;
+}
+
+.menuSheetDishName {
+  font-weight:800;
+  color:var(--text);
+}
+
+.menuSheetDishDesc {
+  margin-top:4px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.35;
+}
+
+.menuSheetDishPrice {
+  font-weight:900;
+  color:var(--text);
+  white-space:nowrap;
+}
+
+.menuSheetEmpty {
+  padding:16px;
+  border:1px dashed var(--line);
+  border-radius:16px;
+  color:var(--muted);
 }
 
 .mapWrap{height:220px; border-radius:16px; overflow:hidden; border:1px solid var(--line); background:var(--chip)}

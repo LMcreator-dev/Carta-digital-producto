@@ -1643,6 +1643,14 @@ placeIdModalBackdrop?.addEventListener("click", closePlaceIdModal);
 placeIdModalClose?.addEventListener("click", closePlaceIdModal);
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (menuDishPickerModal?.getAttribute("aria-hidden") === "false") {
+    closeMenuDishPicker();
+    return;
+  }
+  if (menuEditorModal?.getAttribute("aria-hidden") === "false") {
+    closeMenuEditor();
+    return;
+  }
   if (profileImageGalleryModal?.getAttribute("aria-hidden") === "false") {
     closeProfileImageGalleryModal();
     return;
@@ -2004,6 +2012,7 @@ async function cargarPlatos() {
   ALL_PLATOS = platos || [];
   renderCategoriasList();
   renderPlatosFiltrados();
+  renderMenusCompuestosList();
 }
 
 function renderPlatosFiltrados() {
@@ -2347,6 +2356,1154 @@ guardarPlatoBtn.onclick = async () => {
   }
 };
 
+// ========== MENUS COMPUESTOS ==========
+function isMissingMenusFeatureError(error) {
+  const message = safeText(error?.message).toLowerCase();
+  if (!message) return false;
+  const mentionsMenuTables = [
+    "menus",
+    "menus_programacion",
+    "menus_campos",
+    "menus_campos_platos",
+  ].some((fragment) => message.includes(fragment));
+  const indicatesMissingRelation =
+    message.includes("does not exist") ||
+    message.includes("schema cache") ||
+    message.includes("could not find the table") ||
+    message.includes("relation") ||
+    message.includes("not found");
+  return mentionsMenuTables && indicatesMissingRelation;
+}
+
+function setMenusFeatureAvailability(isAvailable, reason = "") {
+  menusFeatureAvailable = Boolean(isAvailable);
+  menusFeatureUnavailableReason = menusFeatureAvailable ? "" : safeText(reason).trim();
+
+  if (openMenuEditorBtn instanceof HTMLButtonElement) {
+    openMenuEditorBtn.disabled = !menusFeatureAvailable;
+    openMenuEditorBtn.title = menusFeatureAvailable
+      ? ""
+      : menusFeatureUnavailableReason || "Menus no esta disponible.";
+  }
+
+  if (!menusFeatureAvailable) {
+    closeMenuDishPicker();
+    closeMenuEditor();
+  }
+}
+
+function ensureMenusFeatureAvailable() {
+  if (menusFeatureAvailable) return true;
+  alert(
+    menusFeatureUnavailableReason ||
+      "La funcionalidad Menus no esta disponible en esta base de datos.",
+  );
+  return false;
+}
+
+function getMenuCompuestoById(menuId) {
+  return ALL_MENUS_COMPUESTOS.find((menu) => idsEqual(menu?.id, menuId)) || null;
+}
+
+function getMenuCamposByMenuId(menuId) {
+  return (ALL_MENUS_CAMPOS || [])
+    .filter((campo) => idsEqual(campo?.menu_id, menuId))
+    .sort((a, b) => {
+      const ao = Number(a?.orden) || 0;
+      const bo = Number(b?.orden) || 0;
+      if (ao !== bo) return ao - bo;
+      return safeText(a?.id).localeCompare(safeText(b?.id));
+    });
+}
+
+function getMenuCampoPlatosByCampoId(campoId) {
+  return (ALL_MENUS_CAMPOS_PLATOS || [])
+    .filter((item) => idsEqual(item?.menu_campo_id, campoId))
+    .sort((a, b) => {
+      const ao = Number(a?.orden) || 0;
+      const bo = Number(b?.orden) || 0;
+      if (ao !== bo) return ao - bo;
+      return safeText(a?.id).localeCompare(safeText(b?.id));
+    });
+}
+
+function getMenuProgramacionByMenuId(menuId) {
+  return (ALL_MENUS_PROGRAMACION || [])
+    .filter(
+      (entry) =>
+        idsEqual(entry?.menu_id, menuId) &&
+        (entry?.activa == null || Boolean(entry?.activa)),
+    )
+    .sort((a, b) => Number(a?.weekday) - Number(b?.weekday));
+}
+
+function getMenuProgramacionWeekdays(menuId) {
+  return getMenuProgramacionByMenuId(menuId)
+    .map((entry) => normalizeWeekday(entry?.weekday))
+    .filter((entry) => entry != null);
+}
+
+function getPlatoById(platoId) {
+  return ALL_PLATOS.find((plato) => idsEqual(plato?.id, platoId)) || null;
+}
+
+function getSortedCatalogDishes() {
+  return [...(ALL_PLATOS || [])].sort((a, b) =>
+    safeText(a?.plato).localeCompare(safeText(b?.plato), "es", {
+      sensitivity: "base",
+    }),
+  );
+}
+
+function formatMenuProgramacionSummary(menuId) {
+  const weekdays = getMenuProgramacionWeekdays(menuId);
+  if (!weekdays.length) return "Siempre";
+  return weekdays.map((day) => getMenuWeekdayLabel(day)).join(", ");
+}
+
+function nextMenuEditorFieldKey() {
+  menuEditorFieldSeq += 1;
+  return `field_${Date.now()}_${menuEditorFieldSeq}`;
+}
+
+function createMenuEditorDishEntry(seed = {}) {
+  return {
+    linkId: seed?.linkId ?? null,
+    plato_id: safeText(seed?.plato_id).trim(),
+    precio_override:
+      seed?.precio_override == null ? "" : safeText(seed?.precio_override).trim(),
+    notas: safeText(seed?.notas).trim(),
+  };
+}
+
+function createMenuEditorField(seed = {}) {
+  const dishes = Array.isArray(seed?.dishes)
+    ? seed.dishes
+        .map((entry) => createMenuEditorDishEntry(entry))
+        .filter((entry) => safeText(entry?.plato_id).trim())
+    : [];
+
+  return {
+    key: safeText(seed?.key).trim() || nextMenuEditorFieldKey(),
+    id: seed?.id ?? null,
+    nombre: safeText(seed?.nombre),
+    descripcion: safeText(seed?.descripcion),
+    dishes,
+  };
+}
+
+function createEmptyMenuEditorState() {
+  return {
+    id: "",
+    nombre: "",
+    descripcion: "",
+    activo: true,
+    weekdays: [],
+    fields: [],
+  };
+}
+
+function setMenuEditorOpen(isOpen) {
+  if (!(menuEditorModal instanceof HTMLElement)) return;
+  menuEditorModal.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  syncModalBodyLock();
+}
+
+function setMenuDishPickerOpen(isOpen) {
+  if (!(menuDishPickerModal instanceof HTMLElement)) return;
+  menuDishPickerModal.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  syncModalBodyLock();
+}
+
+function isMenuEditorOpen() {
+  return menuEditorModal?.getAttribute("aria-hidden") === "false";
+}
+
+function isMenuDishPickerOpen() {
+  return menuDishPickerModal?.getAttribute("aria-hidden") === "false";
+}
+
+function closeMenuDishPicker() {
+  menuDishPickerState = null;
+  setMenuDishPickerOpen(false);
+}
+
+function closeMenuEditor() {
+  closeMenuDishPicker();
+  menuEditorState = null;
+  setMenuEditorOpen(false);
+}
+
+function setMenuEditorWeekdays(values) {
+  if (!(menuEditorWeekdays instanceof HTMLElement)) return;
+  const selected = new Set(
+    (values || [])
+      .map((value) => normalizeWeekday(value))
+      .filter((value) => value != null),
+  );
+  menuEditorWeekdays.querySelectorAll("input[type='checkbox']").forEach((input) => {
+    const normalized = normalizeWeekday(input.value);
+    input.checked = normalized != null && selected.has(normalized);
+  });
+}
+
+function getMenuEditorWeekdays() {
+  if (!(menuEditorWeekdays instanceof HTMLElement)) return [];
+  return Array.from(
+    menuEditorWeekdays.querySelectorAll("input[type='checkbox']:checked"),
+  )
+    .map((input) => normalizeWeekday(input.value))
+    .filter((value) => value != null)
+    .filter((value, index, arr) => arr.indexOf(value) === index)
+    .sort((a, b) => a - b);
+}
+
+function getMenuEditorFieldByKey(fieldKey) {
+  if (!menuEditorState) return null;
+  const key = safeText(fieldKey).trim();
+  return (
+    menuEditorState.fields.find((field) => safeText(field?.key).trim() === key) ||
+    null
+  );
+}
+
+function getMenuEditorFieldDish(field, dishId) {
+  if (!field) return null;
+  return field.dishes.find((entry) => idsEqual(entry?.plato_id, dishId)) || null;
+}
+
+function formatMenuEditorDishMeta(dish) {
+  if (!dish) return "Plato no disponible";
+  const categories = getPlatoCategoryIds(dish)
+    .map((id) => categoriaNombreById(id))
+    .filter(Boolean);
+  const categoryText = categories.length ? categories.join(" / ") : "Sin categoria";
+  const subcat = safeText(dish?.subcategoria).trim();
+  return subcat ? `${categoryText} · ${subcat}` : categoryText;
+}
+
+function getMenuDishPickerField() {
+  return getMenuEditorFieldByKey(menuDishPickerState?.fieldKey);
+}
+
+function getDishPickerSelectedCategoryId() {
+  const value = Number(menuDishPickerCategoria?.value);
+  return Number.isFinite(value) ? value : null;
+}
+
+function getDishPickerSelectedSubcategoria() {
+  return safeText(menuDishPickerSubcategoria?.value).trim();
+}
+
+function fillMenuDishPickerCategoryOptions() {
+  if (!(menuDishPickerCategoria instanceof HTMLSelectElement)) return;
+  const selectedCategoryId = Number(menuDishPickerState?.categoryId);
+  menuDishPickerCategoria.innerHTML = '<option value="">Todas</option>';
+  [...(ALL_CATEGORIAS || [])]
+    .sort((a, b) =>
+      safeText(a?.nombre).localeCompare(safeText(b?.nombre), "es", {
+        sensitivity: "base",
+      }),
+    )
+    .forEach((category) => {
+      const option = document.createElement("option");
+      option.value = safeText(category?.id);
+      option.textContent = safeText(category?.nombre).trim() || `Categoria ${category?.id}`;
+      menuDishPickerCategoria.appendChild(option);
+    });
+
+  if (
+    Number.isFinite(selectedCategoryId) &&
+    [...menuDishPickerCategoria.options].some(
+      (option) => Number(option.value) === selectedCategoryId,
+    )
+  ) {
+    menuDishPickerCategoria.value = safeText(selectedCategoryId);
+  } else {
+    menuDishPickerCategoria.value = "";
+    if (menuDishPickerState) menuDishPickerState.categoryId = null;
+  }
+}
+
+function fillMenuDishPickerSubcategoriaOptions() {
+  if (!(menuDishPickerSubcategoria instanceof HTMLSelectElement)) return;
+  const selectedCategoryId = getDishPickerSelectedCategoryId();
+  const selectedSubcategoria = safeText(menuDishPickerState?.subcategoria).trim();
+  const subcategorias = Array.from(
+    new Set(
+      (ALL_PLATOS || [])
+        .filter((dish) =>
+          selectedCategoryId == null ? true : getPlatoCategoryIds(dish).includes(selectedCategoryId),
+        )
+        .map((dish) => safeText(dish?.subcategoria).trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+
+  menuDishPickerSubcategoria.innerHTML = '<option value="">Todas</option>';
+  subcategorias.forEach((subcategoria) => {
+    const option = document.createElement("option");
+    option.value = subcategoria;
+    option.textContent = subcategoria;
+    menuDishPickerSubcategoria.appendChild(option);
+  });
+
+  if (
+    selectedSubcategoria &&
+    [...menuDishPickerSubcategoria.options].some(
+      (option) => option.value === selectedSubcategoria,
+    )
+  ) {
+    menuDishPickerSubcategoria.value = selectedSubcategoria;
+  } else {
+    menuDishPickerSubcategoria.value = "";
+    if (menuDishPickerState) menuDishPickerState.subcategoria = "";
+  }
+}
+
+function getMenuDishPickerFilteredDishes() {
+  const selectedCategoryId = getDishPickerSelectedCategoryId();
+  const selectedSubcategoria = getDishPickerSelectedSubcategoria();
+
+  return getSortedCatalogDishes().filter((dish) => {
+    const matchesCategory =
+      selectedCategoryId == null ||
+      getPlatoCategoryIds(dish).includes(selectedCategoryId);
+    if (!matchesCategory) return false;
+    if (!selectedSubcategoria) return true;
+    return safeText(dish?.subcategoria).trim() === selectedSubcategoria;
+  });
+}
+
+function renderMenuDishPickerList() {
+  if (!(menuDishPickerList instanceof HTMLElement)) return;
+  const field = getMenuDishPickerField();
+  if (!field) {
+    menuDishPickerList.innerHTML =
+      '<div class="empty-state">Selecciona un campo antes de anadir platos.</div>';
+    return;
+  }
+
+  const filteredDishes = getMenuDishPickerFilteredDishes();
+  const selectedDishIds = new Set(
+    (field.dishes || [])
+      .map((entry) => safeText(entry?.plato_id).trim())
+      .filter(Boolean),
+  );
+
+  if (!filteredDishes.length) {
+    menuDishPickerList.innerHTML =
+      '<div class="empty-state">No hay platos para ese filtro.</div>';
+    return;
+  }
+
+  menuDishPickerList.innerHTML = filteredDishes
+    .map((dish) => {
+      const dishId = safeText(dish?.id).trim();
+      const dishName = safeText(dish?.plato).trim() || `Plato #${dishId}`;
+      const checked = selectedDishIds.has(dishId);
+      return `
+        <label class="menu-dish-picker-item${checked ? " is-selected" : ""}">
+          <input
+            type="checkbox"
+            class="menu-check-input"
+            data-role="picker-dish-toggle"
+            data-field-key="${escapeHtml(field.key)}"
+            data-dish-id="${escapeHtml(dishId)}"
+            ${checked ? "checked" : ""}
+          />
+          <span class="menu-dish-picker-main">
+            <span class="menu-dish-picker-name">${escapeHtml(dishName)}</span>
+            <span class="menu-dish-picker-meta">${escapeHtml(formatMenuEditorDishMeta(dish))}</span>
+          </span>
+          <span class="menu-dish-picker-price">${escapeHtml(formatMoneyEur(dish?.precio) || "Sin precio")}</span>
+        </label>
+      `;
+    })
+    .join("");
+
+  menuDishPickerList
+    .querySelectorAll("[data-role='picker-dish-toggle']")
+    .forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        const targetField = getMenuEditorFieldByKey(checkbox.dataset.fieldKey);
+        if (!targetField) return;
+        const dishId = safeText(checkbox.dataset.dishId).trim();
+        if (!dishId) return;
+
+        if (checkbox.checked) {
+          if (!getMenuEditorFieldDish(targetField, dishId)) {
+            targetField.dishes.push(createMenuEditorDishEntry({ plato_id: dishId }));
+          }
+        } else {
+          targetField.dishes = targetField.dishes.filter(
+            (entry) => !idsEqual(entry?.plato_id, dishId),
+          );
+        }
+
+        renderMenuEditorFields();
+        renderMenuDishPickerList();
+      });
+    });
+}
+
+function openMenuDishPicker(fieldKey) {
+  const field = getMenuEditorFieldByKey(fieldKey);
+  if (!field) return;
+
+  menuDishPickerState = {
+    fieldKey: safeText(field.key).trim(),
+    categoryId: null,
+    subcategoria: "",
+  };
+
+  if (menuDishPickerTitle) {
+    const fieldName = safeText(field.nombre).trim() || "Sin nombre";
+    menuDishPickerTitle.textContent = `Seleccionar platos · ${fieldName}`;
+  }
+
+  fillMenuDishPickerCategoryOptions();
+  fillMenuDishPickerSubcategoriaOptions();
+  renderMenuDishPickerList();
+  setMenuDishPickerOpen(true);
+}
+
+function renderMenuEditorFields() {
+  if (!(menuEditorCamposContainer instanceof HTMLElement)) return;
+  if (!menuEditorState) {
+    menuEditorCamposContainer.innerHTML = "";
+    return;
+  }
+
+  const fields = Array.isArray(menuEditorState.fields) ? menuEditorState.fields : [];
+
+  if (!fields.length) {
+    menuEditorCamposContainer.innerHTML =
+      '<div class="empty-state">No hay campos todavia. Pulsa "+ Campo".</div>';
+    return;
+  }
+
+  menuEditorCamposContainer.innerHTML = fields
+    .map((field) => {
+      const fieldTitle = safeText(field?.nombre).trim() || "Sin nombre";
+      const selectedCount = field.dishes.length;
+      const selectedDishRows = (field.dishes || [])
+        .map((entry) => {
+          const dishId = safeText(entry?.plato_id).trim();
+          if (!dishId) return "";
+          const dish = getPlatoById(dishId);
+          const dishName = safeText(dish?.plato).trim() || `Plato #${dishId}`;
+          const overrideValue = safeText(entry?.precio_override).trim();
+          return `
+            <div class="menu-selected-dish-row">
+              <div class="menu-selected-dish-main">
+                <span class="menu-selected-dish-name">${escapeHtml(dishName)}</span>
+                <span class="menu-selected-dish-meta">${escapeHtml(formatMenuEditorDishMeta(dish))}</span>
+              </div>
+              <label class="field menu-selected-dish-price-field">
+                Precio en menu
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="Base"
+                  data-role="dish-price"
+                  data-field-key="${escapeHtml(field.key)}"
+                  data-dish-id="${escapeHtml(dishId)}"
+                  value="${escapeHtml(overrideValue)}"
+                />
+              </label>
+              <button
+                type="button"
+                class="btn-eliminar"
+                data-role="dish-remove"
+                data-field-key="${escapeHtml(field.key)}"
+                data-dish-id="${escapeHtml(dishId)}"
+              >
+                Quitar
+              </button>
+            </div>
+          `;
+        })
+        .filter(Boolean)
+        .join("");
+
+      return `
+        <article class="menu-editor-field" data-field-key="${escapeHtml(field.key)}">
+          <div class="menu-editor-field-top">
+            <strong data-role="field-title">${escapeHtml(fieldTitle)}</strong>
+            <span class="menu-chip">${selectedCount} platos</span>
+            <button
+              type="button"
+              class="btn-editar"
+              data-role="field-add-dishes"
+              data-field-key="${escapeHtml(field.key)}"
+            >
+              + Anadir platos
+            </button>
+            <button
+              type="button"
+              class="btn-eliminar"
+              data-role="field-delete"
+              data-field-key="${escapeHtml(field.key)}"
+            >
+              Eliminar campo
+            </button>
+          </div>
+
+          <div class="grid-2">
+            <label class="field">
+              Nombre del campo
+              <input
+                data-role="field-name"
+                data-field-key="${escapeHtml(field.key)}"
+                value="${escapeHtml(safeText(field.nombre))}"
+                placeholder="Ej: Principal"
+              />
+            </label>
+            <label class="field">
+              Descripcion (opcional)
+              <input
+                data-role="field-description"
+                data-field-key="${escapeHtml(field.key)}"
+                value="${escapeHtml(safeText(field.descripcion))}"
+                placeholder="Opcional"
+              />
+            </label>
+          </div>
+
+          <div class="menu-field-dishes-list">
+            ${
+              selectedDishRows ||
+              '<div class="empty-state">No has seleccionado platos en este campo.</div>'
+            }
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  menuEditorCamposContainer.querySelectorAll("[data-role='field-name']").forEach((input) => {
+    input.addEventListener("input", () => {
+      const field = getMenuEditorFieldByKey(input.dataset.fieldKey);
+      if (!field) return;
+      field.nombre = input.value;
+      const card = input.closest(".menu-editor-field");
+      const titleNode = card?.querySelector("[data-role='field-title']");
+      if (titleNode) {
+        titleNode.textContent = safeText(input.value).trim() || "Sin nombre";
+      }
+    });
+  });
+
+  menuEditorCamposContainer
+    .querySelectorAll("[data-role='field-description']")
+    .forEach((input) => {
+      input.addEventListener("input", () => {
+        const field = getMenuEditorFieldByKey(input.dataset.fieldKey);
+        if (!field) return;
+        field.descripcion = input.value;
+      });
+    });
+
+  menuEditorCamposContainer.querySelectorAll("[data-role='field-delete']").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!menuEditorState) return;
+      const fieldKey = safeText(button.dataset.fieldKey).trim();
+      menuEditorState.fields = menuEditorState.fields.filter(
+        (field) => safeText(field?.key).trim() !== fieldKey,
+      );
+      if (idsEqual(menuDishPickerState?.fieldKey, fieldKey)) {
+        closeMenuDishPicker();
+      }
+      renderMenuEditorFields();
+    });
+  });
+
+  menuEditorCamposContainer
+    .querySelectorAll("[data-role='field-add-dishes']")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const field = getMenuEditorFieldByKey(button.dataset.fieldKey);
+        if (!field) return;
+        openMenuDishPicker(field.key);
+      });
+    });
+
+  menuEditorCamposContainer.querySelectorAll("[data-role='dish-remove']").forEach((button) => {
+    button.addEventListener("click", () => {
+      const field = getMenuEditorFieldByKey(button.dataset.fieldKey);
+      if (!field) return;
+      const dishId = safeText(button.dataset.dishId).trim();
+      field.dishes = field.dishes.filter((entry) => !idsEqual(entry?.plato_id, dishId));
+      renderMenuEditorFields();
+      if (isMenuDishPickerOpen() && idsEqual(menuDishPickerState?.fieldKey, field.key)) {
+        renderMenuDishPickerList();
+      }
+    });
+  });
+
+  menuEditorCamposContainer.querySelectorAll("[data-role='dish-price']").forEach((input) => {
+    input.addEventListener("input", () => {
+      const field = getMenuEditorFieldByKey(input.dataset.fieldKey);
+      if (!field) return;
+      const entry = getMenuEditorFieldDish(field, input.dataset.dishId);
+      if (!entry) return;
+      entry.precio_override = safeText(input.value).trim();
+    });
+  });
+}
+
+function applyMenuEditorStateToForm() {
+  if (!menuEditorState) return;
+
+  if (menuEditorTitle) {
+    menuEditorTitle.textContent = menuEditorState.id ? "Editar menu" : "Nuevo menu";
+  }
+  if (menuEditorId) menuEditorId.value = safeText(menuEditorState.id);
+  if (menuEditorNombre) menuEditorNombre.value = safeText(menuEditorState.nombre);
+  if (menuEditorDescripcion) {
+    menuEditorDescripcion.value = safeText(menuEditorState.descripcion);
+  }
+  if (menuEditorActivo) menuEditorActivo.checked = Boolean(menuEditorState.activo);
+  setMenuEditorWeekdays(menuEditorState.weekdays);
+  if (menuEditorDeleteBtn) {
+    menuEditorDeleteBtn.style.display = menuEditorState.id ? "" : "none";
+  }
+  renderMenuEditorFields();
+}
+
+function openMenuEditorForCreate() {
+  if (!ensureMenusFeatureAvailable()) return;
+  menuEditorState = createEmptyMenuEditorState();
+  applyMenuEditorStateToForm();
+  setMenuEditorOpen(true);
+  menuEditorNombre?.focus();
+}
+
+function openMenuEditorForEdit(menuId) {
+  if (!ensureMenusFeatureAvailable()) return;
+  const menu = getMenuCompuestoById(menuId);
+  if (!menu) return;
+
+  const fields = getMenuCamposByMenuId(menu.id).map((field) => {
+    const dishes = getMenuCampoPlatosByCampoId(field.id).map((item) =>
+      createMenuEditorDishEntry({
+        linkId: item.id,
+        plato_id: item.plato_id,
+        precio_override: item.precio_override,
+        notas: item.notas,
+      }),
+    );
+    return createMenuEditorField({
+      id: field.id,
+      nombre: field.nombre,
+      descripcion: field.descripcion,
+      dishes,
+    });
+  });
+
+  menuEditorState = {
+    id: safeText(menu.id).trim(),
+    nombre: safeText(menu.nombre),
+    descripcion: safeText(menu.descripcion),
+    activo: menu?.activo == null ? true : Boolean(menu.activo),
+    weekdays: getMenuProgramacionWeekdays(menu.id),
+    fields,
+  };
+
+  applyMenuEditorStateToForm();
+  setMenuEditorOpen(true);
+  menuEditorNombre?.focus();
+}
+
+function renderMenusCompuestosList() {
+  if (!(menusCompuestosContainer instanceof HTMLElement)) return;
+  menusCompuestosContainer.innerHTML = "";
+
+  if (!menusFeatureAvailable) {
+    menusCompuestosContainer.innerHTML = `
+      <div class="empty-state empty-state--panel">
+        ${escapeHtml(
+          menusFeatureUnavailableReason ||
+            "Menus no esta disponible en esta instalacion porque faltan las tablas necesarias.",
+        )}
+      </div>
+    `;
+    return;
+  }
+
+  if (!ALL_MENUS_COMPUESTOS.length) {
+    menusCompuestosContainer.innerHTML =
+      '<div class="empty-state">Todavia no hay menus compuestos. Pulsa "Nuevo menu".</div>';
+    return;
+  }
+
+  ALL_MENUS_COMPUESTOS.forEach((menu) => {
+    const isActive = menu?.activo == null || Boolean(menu?.activo);
+    const isPublished = menu?.publicado == null || Boolean(menu?.publicado);
+    const weekdays = getMenuProgramacionWeekdays(menu?.id);
+    const fieldsCount = getMenuCamposByMenuId(menu?.id).length;
+    const scheduleText = weekdays.length
+      ? `Dias: ${formatMenuProgramacionSummary(menu?.id)}`
+      : "Siempre activo";
+
+    const div = document.createElement("article");
+    div.className = "menu-compuesto-item" + (isActive ? "" : " inactiva");
+    div.dataset.id = safeText(menu?.id);
+    div.innerHTML = `
+      <div class="menu-row-head">
+        <div>
+          <div class="menu-row-title">${escapeHtml(safeText(menu?.nombre) || "Menu sin nombre")}</div>
+          <div class="menu-row-desc">${escapeHtml(safeText(menu?.descripcion || ""))}</div>
+        </div>
+        <div class="menu-row-price">${fieldsCount} campos</div>
+      </div>
+      <div class="menu-row-meta">
+        <span class="menu-chip ${isActive ? "is-positive" : ""}">${isActive ? "Activo" : "Inactivo"}</span>
+        <span class="menu-chip ${isPublished ? "is-positive" : ""}">${isPublished ? "Publicado" : "Oculto"}</span>
+        <span class="menu-chip ${weekdays.length ? "is-warning" : ""}">${escapeHtml(scheduleText)}</span>
+      </div>
+      <div class="card-actions menu-row-actions">
+        <button class="btn-editar" type="button" data-action="edit" data-id="${escapeHtml(menu?.id)}">Editar</button>
+        <button
+          class="btn-toggle toggle-switch ${isActive ? "is-on" : ""}"
+          type="button"
+          data-action="toggle-active"
+          data-id="${escapeHtml(menu?.id)}"
+          aria-label="${isActive ? "Ocultar menu" : "Mostrar menu"}"
+        >
+          <span class="toggle-switch__track"><span class="toggle-switch__thumb"></span></span>
+          <span class="toggle-switch__label">Activo</span>
+        </button>
+        <button class="btn-eliminar" type="button" data-action="delete" data-id="${escapeHtml(menu?.id)}">Eliminar</button>
+      </div>
+    `;
+    menusCompuestosContainer.appendChild(div);
+  });
+}
+
+async function persistMenuProgramacion(menuId, weekdays) {
+  const menuIdText = safeText(menuId).trim();
+  const { error: deleteError } = await db
+    .from("Menus_programacion")
+    .delete()
+    .eq("menu_id", menuIdText);
+  if (deleteError) throw deleteError;
+
+  const normalizedWeekdays = Array.from(
+    new Set(
+      (weekdays || [])
+        .map((day) => normalizeWeekday(day))
+        .filter((day) => day != null),
+    ),
+  ).sort((a, b) => a - b);
+
+  if (!normalizedWeekdays.length) return;
+
+  const payload = normalizedWeekdays.map((weekday, index) => ({
+    menu_id: menuIdText,
+    weekday,
+    activa: true,
+    orden: index,
+  }));
+
+  const { error } = await db.from("Menus_programacion").insert(payload);
+  if (error) throw error;
+}
+
+function parseMenuEditorPrice(rawValue, dishName) {
+  const raw = safeText(rawValue).trim();
+  if (!raw) return null;
+  const amount = Number(raw);
+  if (!Number.isFinite(amount) || amount < 0) {
+    throw new Error(`El precio de "${dishName}" no es valido.`);
+  }
+  return Number(amount.toFixed(2));
+}
+
+function buildMenuEditorSaveModel() {
+  const nombre = safeText(menuEditorNombre?.value).trim();
+  if (!nombre) {
+    throw new Error("Escribe un nombre para el menu.");
+  }
+
+  if (!menuEditorState || !Array.isArray(menuEditorState.fields)) {
+    throw new Error("No se pudo leer los campos del menu.");
+  }
+
+  const normalizedFields = menuEditorState.fields.map((field, index) => {
+    const fieldName = safeText(field?.nombre).trim();
+    if (!fieldName) {
+      throw new Error(`Escribe el nombre del campo ${index + 1}.`);
+    }
+
+    const uniqueDishes = new Map();
+    (field?.dishes || []).forEach((entry) => {
+      const dishId = safeText(entry?.plato_id).trim();
+      if (!dishId) return;
+      uniqueDishes.set(dishId, entry);
+    });
+
+    const dishes = Array.from(uniqueDishes.values()).map((entry) => {
+      const dish = getPlatoById(entry.plato_id);
+      const dishLabel =
+        safeText(dish?.plato).trim() || `Plato #${safeText(entry?.plato_id)}`;
+      return {
+        plato_id: safeText(entry?.plato_id).trim(),
+        precio_override: parseMenuEditorPrice(entry?.precio_override, dishLabel),
+        notas: null,
+      };
+    });
+
+    if (!dishes.length) {
+      throw new Error(`Selecciona al menos un plato en "${fieldName}".`);
+    }
+
+    return {
+      nombre: fieldName,
+      descripcion: toNullableInputValue(field?.descripcion),
+      dishes,
+    };
+  });
+
+  if (!normalizedFields.length) {
+    throw new Error("Anade al menos un campo al menu.");
+  }
+
+  return {
+    id: safeText(menuEditorId?.value).trim(),
+    nombre,
+    descripcion: toNullableInputValue(menuEditorDescripcion?.value),
+    activo: Boolean(menuEditorActivo?.checked),
+    weekdays: getMenuEditorWeekdays(),
+    fields: normalizedFields,
+  };
+}
+
+async function persistMenuFieldsAndDishes(menuId, fields) {
+  const menuIdText = safeText(menuId).trim();
+  const existingFieldIds = getMenuCamposByMenuId(menuIdText)
+    .map((field) => field.id)
+    .filter(Boolean);
+
+  if (existingFieldIds.length) {
+    const { error: deleteDishError } = await db
+      .from("Menus_campos_platos")
+      .delete()
+      .in("menu_campo_id", existingFieldIds);
+    if (deleteDishError) throw deleteDishError;
+  }
+
+  const { error: deleteError } = await db
+    .from("Menus_campos")
+    .delete()
+    .eq("menu_id", menuIdText);
+  if (deleteError) throw deleteError;
+
+  for (let fieldIndex = 0; fieldIndex < fields.length; fieldIndex += 1) {
+    const field = fields[fieldIndex];
+    const { data: insertedField, error: fieldError } = await db
+      .from("Menus_campos")
+      .insert({
+        menu_id: menuIdText,
+        nombre: field.nombre,
+        descripcion: field.descripcion,
+        orden: fieldIndex,
+        activo: true,
+        permite_multiples: true,
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (fieldError) throw fieldError;
+
+    const fieldId = safeText(insertedField?.id).trim();
+    if (!fieldId) {
+      throw new Error("No se pudo crear un campo del menu.");
+    }
+
+    const dishPayload = field.dishes.map((dish, dishIndex) => ({
+      menu_campo_id: fieldId,
+      plato_id: dish.plato_id,
+      precio_override: dish.precio_override,
+      notas: dish.notas,
+      activo: true,
+      orden: dishIndex,
+    }));
+
+    if (dishPayload.length) {
+      const { error: dishError } = await db.from("Menus_campos_platos").insert(dishPayload);
+      if (dishError) throw dishError;
+    }
+  }
+}
+
+async function guardarMenuCompuesto() {
+  if (!ensureMenusFeatureAvailable()) return;
+  if (!menuEditorState) return;
+
+  try {
+    const currentUser = await requireUser();
+    const model = buildMenuEditorSaveModel();
+    const isEditing = Boolean(model.id);
+    let menuId = model.id;
+
+    const menuPayload = {
+      nombre: model.nombre,
+      descripcion: model.descripcion,
+      activo: model.activo,
+      publicado: true,
+      auto_publicacion: model.weekdays.length > 0,
+    };
+
+    if (isEditing) {
+      const { error } = await db.from("Menus").update(menuPayload).eq("id", menuId);
+      if (error) throw error;
+    } else {
+      const nextOrden = (ALL_MENUS_COMPUESTOS || []).length;
+      const { data, error } = await db
+        .from("Menus")
+        .insert({
+          ...menuPayload,
+          user_id: currentUser.id,
+          orden: nextOrden,
+        })
+        .select("id")
+        .maybeSingle();
+      if (error) throw error;
+      menuId = safeText(data?.id).trim();
+    }
+
+    if (!menuId) {
+      throw new Error("No se pudo resolver el id del menu guardado.");
+    }
+
+    await persistMenuProgramacion(menuId, model.weekdays);
+    await persistMenuFieldsAndDishes(menuId, model.fields);
+    await cargarMenusCompuestos();
+    closeMenuEditor();
+    alert(isEditing ? "Menu actualizado." : "Menu creado.");
+  } catch (error) {
+    alert(error?.message || "No se pudo guardar el menu.");
+  }
+}
+
+async function toggleMenuCompuestoActivo(menuId) {
+  if (!ensureMenusFeatureAvailable()) return;
+  const menu = getMenuCompuestoById(menuId);
+  if (!menu) return;
+  const activo = !Boolean(menu?.activo);
+  const { error } = await db
+    .from("Menus")
+    .update({ activo })
+    .eq("id", safeText(menuId).trim());
+
+  if (error) {
+    alert(error?.message || "No se pudo actualizar el menu.");
+    return;
+  }
+
+  await cargarMenusCompuestos();
+}
+
+async function eliminarMenuCompuesto(menuId) {
+  if (!ensureMenusFeatureAvailable()) return;
+  const menu = getMenuCompuestoById(menuId);
+  if (!menu) return;
+  if (!confirm(`Eliminar menu "${safeText(menu.nombre)}"?`)) return;
+
+  const menuIdText = safeText(menuId).trim();
+  const fieldIds = getMenuCamposByMenuId(menuIdText)
+    .map((field) => field.id)
+    .filter(Boolean);
+
+  if (fieldIds.length) {
+    const { error: dishDeleteError } = await db
+      .from("Menus_campos_platos")
+      .delete()
+      .in("menu_campo_id", fieldIds);
+    if (dishDeleteError) {
+      alert(dishDeleteError?.message || "No se pudo limpiar los platos del menu.");
+      return;
+    }
+  }
+
+  const { error: fieldsError } = await db
+    .from("Menus_campos")
+    .delete()
+    .eq("menu_id", menuIdText);
+  if (fieldsError) {
+    alert(fieldsError?.message || "No se pudo eliminar los campos del menu.");
+    return;
+  }
+
+  const { error: programacionError } = await db
+    .from("Menus_programacion")
+    .delete()
+    .eq("menu_id", menuIdText);
+  if (programacionError) {
+    alert(programacionError?.message || "No se pudo eliminar la programacion.");
+    return;
+  }
+
+  const { error } = await db.from("Menus").delete().eq("id", menuIdText);
+  if (error) {
+    alert(error?.message || "No se pudo eliminar el menu.");
+    return;
+  }
+
+  if (menuEditorState && idsEqual(menuEditorState.id, menuId)) {
+    closeMenuEditor();
+  }
+
+  await cargarMenusCompuestos();
+  alert("Menu eliminado.");
+}
+
+async function cargarMenusCompuestos() {
+  try {
+    const { data: menus, error: menusError } = await db
+      .from("Menus")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("orden", { ascending: true })
+      .order("id", { ascending: true });
+    if (menusError) throw menusError;
+    ALL_MENUS_COMPUESTOS = menus || [];
+
+    const menuIds = ALL_MENUS_COMPUESTOS.map((entry) => entry.id).filter(Boolean);
+
+    if (menuIds.length) {
+      const { data: programacion, error: programacionError } = await db
+        .from("Menus_programacion")
+        .select("*")
+        .in("menu_id", menuIds);
+      if (programacionError) throw programacionError;
+      ALL_MENUS_PROGRAMACION = programacion || [];
+
+      const { data: campos, error: camposError } = await db
+        .from("Menus_campos")
+        .select("*")
+        .in("menu_id", menuIds);
+      if (camposError) throw camposError;
+      ALL_MENUS_CAMPOS = campos || [];
+
+      const campoIds = ALL_MENUS_CAMPOS.map((entry) => entry.id).filter(Boolean);
+      if (campoIds.length) {
+        const { data: campoPlatos, error: campoPlatosError } = await db
+          .from("Menus_campos_platos")
+          .select("*")
+          .in("menu_campo_id", campoIds);
+        if (campoPlatosError) throw campoPlatosError;
+        ALL_MENUS_CAMPOS_PLATOS = campoPlatos || [];
+      } else {
+        ALL_MENUS_CAMPOS_PLATOS = [];
+      }
+    } else {
+      ALL_MENUS_PROGRAMACION = [];
+      ALL_MENUS_CAMPOS = [];
+      ALL_MENUS_CAMPOS_PLATOS = [];
+    }
+
+    setMenusFeatureAvailability(true);
+  } catch (error) {
+    const detail = safeText(error?.message || error);
+    if (isMissingMenusFeatureError(error)) {
+      setMenusFeatureAvailability(
+        false,
+        "Menus no esta disponible porque esta base de datos no incluye las tablas de menus compuestos.",
+      );
+    } else {
+      setMenusFeatureAvailability(false, detail || "No se pudo cargar Menus compuestos.");
+      console.warn("Menus compuestos:", detail);
+    }
+
+    ALL_MENUS_COMPUESTOS = [];
+    ALL_MENUS_PROGRAMACION = [];
+    ALL_MENUS_CAMPOS = [];
+    ALL_MENUS_CAMPOS_PLATOS = [];
+  }
+
+  renderMenusCompuestosList();
+}
+
+function bindMenusCompuestosListActions() {
+  if (!(menusCompuestosContainer instanceof HTMLElement)) return;
+  if (menusCompuestosContainer.dataset.boundActions === "1") return;
+  menusCompuestosContainer.dataset.boundActions = "1";
+
+  menusCompuestosContainer.addEventListener("click", async (event) => {
+    if (!(event.target instanceof Element)) return;
+    const button = event.target.closest("button[data-action]");
+    if (!(button instanceof HTMLButtonElement)) return;
+
+    const action = safeText(button.dataset.action).trim();
+    const targetId = safeText(button.dataset.id).trim();
+    if (!targetId) return;
+
+    if (action === "edit") {
+      openMenuEditorForEdit(targetId);
+      return;
+    }
+
+    if (action === "toggle-active") {
+      await toggleMenuCompuestoActivo(targetId);
+      return;
+    }
+
+    if (action === "delete") {
+      await eliminarMenuCompuesto(targetId);
+    }
+  });
+}
+
+function bindMenuEditorActions() {
+  openMenuEditorBtn?.addEventListener("click", openMenuEditorForCreate);
+  menuEditorAddCampoBtn?.addEventListener("click", () => {
+    if (!menuEditorState) return;
+    menuEditorState.fields.push(createMenuEditorField({ nombre: "Nuevo campo" }));
+    renderMenuEditorFields();
+  });
+  menuEditorSaveBtn?.addEventListener("click", guardarMenuCompuesto);
+  menuEditorDeleteBtn?.addEventListener("click", async () => {
+    const menuId = safeText(menuEditorState?.id || menuEditorId?.value).trim();
+    if (!menuId) return;
+    await eliminarMenuCompuesto(menuId);
+  });
+  menuEditorNombre?.addEventListener("input", () => {
+    if (menuEditorState) menuEditorState.nombre = menuEditorNombre.value;
+  });
+  menuEditorDescripcion?.addEventListener("input", () => {
+    if (menuEditorState) menuEditorState.descripcion = menuEditorDescripcion.value;
+  });
+  menuEditorActivo?.addEventListener("change", () => {
+    if (menuEditorState) menuEditorState.activo = Boolean(menuEditorActivo.checked);
+  });
+  menuDishPickerCategoria?.addEventListener("change", () => {
+    if (!menuDishPickerState) return;
+    menuDishPickerState.categoryId = getDishPickerSelectedCategoryId();
+    menuDishPickerState.subcategoria = "";
+    fillMenuDishPickerSubcategoriaOptions();
+    renderMenuDishPickerList();
+  });
+  menuDishPickerSubcategoria?.addEventListener("change", () => {
+    if (!menuDishPickerState) return;
+    menuDishPickerState.subcategoria = getDishPickerSelectedSubcategoria();
+    renderMenuDishPickerList();
+  });
+  menuDishPickerDoneBtn?.addEventListener("click", closeMenuDishPicker);
+  document.querySelectorAll("[data-menu-editor-close]").forEach((element) => {
+    element.addEventListener("click", closeMenuEditor);
+  });
+  document.querySelectorAll("[data-menu-dish-picker-close]").forEach((element) => {
+    element.addEventListener("click", closeMenuDishPicker);
+  });
+}
+
+bindMenusCompuestosListActions();
+bindMenuEditorActions();
+
 // Toolbar listeners
 platosCategoriaFilter?.addEventListener("change", renderPlatosFiltrados);
 platosSearch?.addEventListener("input", renderPlatosFiltrados);
@@ -2358,6 +3515,7 @@ async function cargarTodo() {
   await cargarPerfil();
   await cargarCategorias();
   await cargarPlatos();
+  await cargarMenusCompuestos();
 }
 
 // Si ya hay sesion, auto login

@@ -50,6 +50,7 @@ const coverImg = document.getElementById("coverImg");
 const coverLogoWrap = document.getElementById("coverLogoWrap");
 const coverLogo = document.getElementById("coverLogo");
 const placeTitle = document.getElementById("placeTitle");
+const homeMenus = document.getElementById("homeMenus");
 const homeCategories = document.getElementById("homeCategories");
 const langBtn = document.getElementById("langBtn");
 const langLabel = document.getElementById("langLabel");
@@ -89,6 +90,11 @@ const sheetPrice = document.getElementById("sheetPrice");
 const sheetDesc = document.getElementById("sheetDesc");
 const sheetAllergenSection = document.getElementById("sheetAllergenSection");
 const sheetAllergens = document.getElementById("sheetAllergens");
+const menuSheet = document.getElementById("menuSheet");
+const menuSheetTitle = document.getElementById("menuSheetTitle");
+const menuSheetDesc = document.getElementById("menuSheetDesc");
+const menuSheetMeta = document.getElementById("menuSheetMeta");
+const menuSheetFields = document.getElementById("menuSheetFields");
 
 const ratingsSheet = document.getElementById("ratingsSheet");
 const ratingsValue = document.getElementById("ratingsValue");
@@ -109,6 +115,10 @@ if (clearSearch) clearSearch.style.visibility = "hidden";
 // =============================
 let CATEGORIAS = [];
 let PLATOS = [];
+let MENUS_COMPUESTOS = [];
+let MENUS_PROGRAMACION = [];
+let MENUS_CAMPOS = [];
+let MENUS_CAMPOS_PLATOS = [];
 
 let ACTIVE_CAT_ID = null;
 let ACTIVE_SUBCAT = "all";
@@ -181,6 +191,13 @@ const I18N = {
     view_reviews: "Ver reseñas",
     info: "Info",
     info_secondary_default: "Wi‑Fi, Teléfono y Dirección",
+    menus_section: "Menus destacados",
+    menu_open: "Ver menu",
+    menu_always_available: "Disponible siempre",
+    menu_today: "Hoy",
+    menu_available_days: "Disponible",
+    menu_courses: "campos",
+    menu_no_fields: "Este menu todavia no tiene campos configurados.",
     ratings: "Valoraciones",
     stars: "Estrellas",
     dish_details: "Detalle",
@@ -240,6 +257,13 @@ const I18N = {
     view_reviews: "View reviews",
     info: "Info",
     info_secondary_default: "Wi‑Fi, Phone and Address",
+    menus_section: "Featured menus",
+    menu_open: "View menu",
+    menu_always_available: "Available every day",
+    menu_today: "Today",
+    menu_available_days: "Available",
+    menu_courses: "sections",
+    menu_no_fields: "This menu has no configured sections yet.",
     ratings: "Ratings",
     stars: "Stars",
     dish_details: "Details",
@@ -371,6 +395,19 @@ function safeText(v) {
   return (v ?? "").toString();
 }
 
+function escapeHtml(value) {
+  return safeText(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function idsEqual(a, b) {
+  return safeText(a).trim() === safeText(b).trim();
+}
+
 function normalizeOptionalUrl(value) {
   const url = safeText(value).trim();
   if (!url) return "";
@@ -421,6 +458,68 @@ function getDishCategoryIds(plato) {
 function getDishPrimaryCategoryId(plato) {
   const ids = getDishCategoryIds(plato);
   return ids.length ? ids[0] : null;
+}
+
+function getMenuCamposByMenuId(menuId) {
+  return (MENUS_CAMPOS || [])
+    .filter((campo) => idsEqual(campo?.menu_id, menuId))
+    .sort((a, b) => {
+      const ao = Number(a?.orden) || 0;
+      const bo = Number(b?.orden) || 0;
+      if (ao !== bo) return ao - bo;
+      return safeText(a?.id).localeCompare(safeText(b?.id));
+    });
+}
+
+function getMenuCampoPlatosByCampoId(campoId) {
+  return (MENUS_CAMPOS_PLATOS || [])
+    .filter((item) => idsEqual(item?.menu_campo_id, campoId))
+    .sort((a, b) => {
+      const ao = Number(a?.orden) || 0;
+      const bo = Number(b?.orden) || 0;
+      if (ao !== bo) return ao - bo;
+      return safeText(a?.id).localeCompare(safeText(b?.id));
+    });
+}
+
+function getMenuProgramacionWeekdays(menuId) {
+  return (MENUS_PROGRAMACION || [])
+    .filter(
+      (entry) =>
+        idsEqual(entry?.menu_id, menuId) &&
+        (entry?.activa == null || Boolean(entry?.activa)),
+    )
+    .map((entry) => Number(entry?.weekday))
+    .filter((weekday) => Number.isInteger(weekday) && weekday >= 0 && weekday <= 6)
+    .sort((a, b) => a - b);
+}
+
+function getMenuWeekdayLabel(weekday) {
+  const labels = {
+    0: CURRENT_LANG === "en" ? "Sunday" : "Domingo",
+    1: CURRENT_LANG === "en" ? "Monday" : "Lunes",
+    2: CURRENT_LANG === "en" ? "Tuesday" : "Martes",
+    3: CURRENT_LANG === "en" ? "Wednesday" : "Miercoles",
+    4: CURRENT_LANG === "en" ? "Thursday" : "Jueves",
+    5: CURRENT_LANG === "en" ? "Friday" : "Viernes",
+    6: CURRENT_LANG === "en" ? "Saturday" : "Sabado",
+  };
+  return labels[weekday] || "";
+}
+
+function isMenuAvailableToday(menu) {
+  const weekdays = getMenuProgramacionWeekdays(menu?.id);
+  if (!weekdays.length) return true;
+  return weekdays.includes(new Date().getDay());
+}
+
+function getVisibleMenus() {
+  return (MENUS_COMPUESTOS || []).filter((menu) => {
+    const isActive = menu?.activo == null || Boolean(menu?.activo);
+    const isPublished = menu?.publicado == null || Boolean(menu?.publicado);
+    if (!isActive || !isPublished) return false;
+    return isMenuAvailableToday(menu);
+  });
 }
 
 function platoInCategory(plato, catId) {
@@ -816,6 +915,8 @@ function handleBackNavigation() {
     closeAllergenZoom();
   } else if (dishSheet?.classList.contains("is-open")) {
     closeSheet();
+  } else if (menuSheet?.classList.contains("is-open")) {
+    closeGenericSheet(menuSheet);
   } else if (ratingsSheet?.classList.contains("is-open")) {
     closeGenericSheet(ratingsSheet);
   } else if (infoSheet?.classList.contains("is-open")) {
@@ -886,6 +987,88 @@ function openSheet(plato) {
   document.body.style.overflow = "hidden";
 }
 
+function openMenuSheet(menu) {
+  if (!menuSheet) return;
+  pushHistoryState({ modal: "menu" });
+  menuSheetDrag?.reset();
+
+  if (menuSheetTitle) {
+    menuSheetTitle.textContent = safeText(menu?.nombre).trim() || "Menu";
+  }
+
+  if (menuSheetDesc) {
+    const description = safeText(menu?.descripcion).trim();
+    menuSheetDesc.textContent = description;
+    menuSheetDesc.style.display = description ? "" : "none";
+  }
+
+  if (menuSheetMeta) {
+    const metaBits = [];
+    const weekdays = getMenuProgramacionWeekdays(menu?.id);
+    const fields = getMenuCamposByMenuId(menu?.id);
+    metaBits.push(
+      `<span class="menuSheetMetaPill">${fields.length} ${t("menu_courses")}</span>`,
+    );
+    metaBits.push(
+      `<span class="menuSheetMetaPill">${
+        weekdays.length
+          ? `${t("menu_available_days")}: ${weekdays.map((day) => getMenuWeekdayLabel(day)).join(", ")}`
+          : t("menu_always_available")
+      }</span>`,
+    );
+    menuSheetMeta.innerHTML = metaBits.join("");
+  }
+
+  if (menuSheetFields) {
+    const fields = getMenuCamposByMenuId(menu?.id);
+    if (!fields.length) {
+      menuSheetFields.innerHTML = `<div class="menuSheetEmpty">${t("menu_no_fields")}</div>`;
+    } else {
+      menuSheetFields.innerHTML = fields
+        .map((field) => {
+          const dishes = getMenuCampoPlatosByCampoId(field.id)
+            .map((entry) => {
+              const dish = PLATOS.find((item) => idsEqual(item?.id, entry?.plato_id));
+              const price = entry?.precio_override ?? dish?.precio;
+              return `
+                <div class="menuSheetDishRow">
+                  <div class="menuSheetDishMain">
+                    <div class="menuSheetDishName">${escapeHtml(
+                      safeText(dish?.plato || `Plato #${entry?.plato_id}`),
+                    )}</div>
+                    <div class="menuSheetDishDesc">${escapeHtml(
+                      safeText(dish?.descripcion || ""),
+                    )}</div>
+                  </div>
+                  <div class="menuSheetDishPrice">${formatPrice(price)}</div>
+                </div>
+              `;
+            })
+            .join("");
+
+          return `
+            <section class="menuSheetField">
+              <div class="menuSheetFieldHead">
+                <div class="menuSheetFieldTitle">${escapeHtml(
+                  safeText(field?.nombre || "Campo"),
+                )}</div>
+                ${
+                  field?.descripcion
+                    ? `<div class="menuSheetFieldDesc">${escapeHtml(safeText(field.descripcion))}</div>`
+                    : ""
+                }
+              </div>
+              <div class="menuSheetDishList">${dishes}</div>
+            </section>
+          `;
+        })
+        .join("");
+    }
+  }
+
+  openGenericSheet(menuSheet);
+}
+
 // =============================
 // Sheet drag-to-close
 // =============================
@@ -947,6 +1130,9 @@ function setupSheetDrag(sheetEl, closeFn, extraDragZone) {
 }
 
 const dishSheetDrag = setupSheetDrag(dishSheet, closeSheet, sheetImageWrap);
+const menuSheetDrag = setupSheetDrag(menuSheet, () =>
+  closeGenericSheet(menuSheet),
+);
 const ratingsSheetDrag = setupSheetDrag(ratingsSheet, () =>
   closeGenericSheet(ratingsSheet),
 );
@@ -995,7 +1181,70 @@ function closeSheet() {
 // =============================
 // Render
 // =============================
+function buildMenuScheduleLabel(menu) {
+  const weekdays = getMenuProgramacionWeekdays(menu?.id);
+  if (!weekdays.length) return t("menu_always_available");
+  return `${t("menu_available_days")}: ${weekdays.map((day) => getMenuWeekdayLabel(day)).join(", ")}`;
+}
+
+function renderHomeMenus() {
+  if (!homeMenus) return;
+  homeMenus.innerHTML = "";
+
+  const visibleMenus = getVisibleMenus();
+  if (!visibleMenus.length) {
+    homeMenus.style.display = "none";
+    return;
+  }
+
+  homeMenus.style.display = "";
+
+  const title = document.createElement("div");
+  title.className = "homeMenusTitle";
+  title.textContent = t("menus_section");
+  homeMenus.appendChild(title);
+
+  const list = document.createElement("div");
+  list.className = "homeMenusList";
+
+  visibleMenus.forEach((menu) => {
+    const fields = getMenuCamposByMenuId(menu?.id);
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "homeMenuCard";
+    card.addEventListener("click", () => openMenuSheet(menu));
+
+    const name = document.createElement("div");
+    name.className = "homeMenuName";
+    name.textContent = safeText(menu?.nombre).trim() || "Menu";
+
+    const desc = document.createElement("div");
+    desc.className = "homeMenuDesc";
+    desc.textContent = safeText(menu?.descripcion).trim() || buildMenuScheduleLabel(menu);
+
+    const meta = document.createElement("div");
+    meta.className = "homeMenuMeta";
+    meta.innerHTML = `
+      <span class="homeMenuMetaPill">${fields.length} ${t("menu_courses")}</span>
+      <span class="homeMenuMetaPill">${buildMenuScheduleLabel(menu)}</span>
+    `;
+
+    const action = document.createElement("div");
+    action.className = "homeMenuAction";
+    action.textContent = t("menu_open");
+
+    card.appendChild(name);
+    card.appendChild(desc);
+    card.appendChild(meta);
+    card.appendChild(action);
+    list.appendChild(card);
+  });
+
+  homeMenus.appendChild(list);
+}
+
 function renderHome() {
+  renderHomeMenus();
   homeCategories.innerHTML = "";
 
   const catsWithItems = CATEGORIAS.filter((c) =>
@@ -1467,6 +1716,67 @@ async function loadProfileIfExists() {
   }
 }
 
+async function loadMenusIfExists() {
+  MENUS_COMPUESTOS = [];
+  MENUS_PROGRAMACION = [];
+  MENUS_CAMPOS = [];
+  MENUS_CAMPOS_PLATOS = [];
+
+  try {
+    const { data: menus, error: menusError } = await db
+      .from("Menus")
+      .select("*")
+      .eq("user_id", clienteId)
+      .order("orden", { ascending: true })
+      .order("id", { ascending: true });
+    if (menusError) throw menusError;
+
+    MENUS_COMPUESTOS = Array.isArray(menus) ? menus : [];
+    const menuIds = MENUS_COMPUESTOS.map((entry) => entry.id).filter(Boolean);
+    if (!menuIds.length) return;
+
+    const { data: programacion, error: programacionError } = await db
+      .from("Menus_programacion")
+      .select("*")
+      .in("menu_id", menuIds);
+    if (programacionError) throw programacionError;
+    MENUS_PROGRAMACION = Array.isArray(programacion) ? programacion : [];
+
+    const { data: campos, error: camposError } = await db
+      .from("Menus_campos")
+      .select("*")
+      .in("menu_id", menuIds);
+    if (camposError) throw camposError;
+    MENUS_CAMPOS = Array.isArray(campos) ? campos : [];
+
+    const campoIds = MENUS_CAMPOS.map((entry) => entry.id).filter(Boolean);
+    if (!campoIds.length) return;
+
+    const { data: campoPlatos, error: campoPlatosError } = await db
+      .from("Menus_campos_platos")
+      .select("*")
+      .in("menu_campo_id", campoIds);
+    if (campoPlatosError) throw campoPlatosError;
+    MENUS_CAMPOS_PLATOS = Array.isArray(campoPlatos) ? campoPlatos : [];
+  } catch (error) {
+    const msg = safeText(error?.message).toLowerCase();
+    const looksMissing =
+      msg.includes("menus") &&
+      (msg.includes("does not exist") ||
+        msg.includes("schema cache") ||
+        msg.includes("could not find the table") ||
+        msg.includes("relation") ||
+        msg.includes("not found"));
+    if (!looksMissing) {
+      console.warn("Menus publicos:", safeText(error?.message || error));
+    }
+    MENUS_COMPUESTOS = [];
+    MENUS_PROGRAMACION = [];
+    MENUS_CAMPOS = [];
+    MENUS_CAMPOS_PLATOS = [];
+  }
+}
+
 function applyProfileToHome() {
   if (!PROFILE) {
     applyPublicTheme(DEFAULT_PRIMARY_COLOR);
@@ -1603,6 +1913,7 @@ async function loadMenu() {
 
     CATEGORIAS = Array.isArray(categorias) ? categorias : [];
     PLATOS = Array.isArray(platos) ? platos : [];
+    await loadMenusIfExists();
 
     renderHome();
     renderSearchDropdown();
@@ -1858,6 +2169,11 @@ dishSheet.addEventListener("click", (e) => {
   if (t?.dataset?.close === "true") closeSheet();
 });
 
+menuSheet?.addEventListener("click", (e) => {
+  const t = e.target;
+  if (t?.dataset?.close === "true") closeGenericSheet(menuSheet);
+});
+
 
 ratingsSheet.addEventListener("click", (e) => {
   const t = e.target;
@@ -1873,6 +2189,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
     if (langMenu?.classList.contains("is-open")) closeLangMenu();
     if (dishSheet.classList.contains("is-open")) closeSheet();
+    if (menuSheet?.classList.contains("is-open")) closeGenericSheet(menuSheet);
     if (ratingsSheet.classList.contains("is-open"))
       closeGenericSheet(ratingsSheet);
     if (infoSheet.classList.contains("is-open")) closeGenericSheet(infoSheet);

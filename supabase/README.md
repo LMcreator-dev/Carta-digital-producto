@@ -10,6 +10,7 @@ El frontend del proyecto esta preparado para trabajar con:
 - schema `public` para RPCs
 - tabla privada de perfil: `CartaDigitalLM.Perfil`
 - tablas de carta: `CartaDigitalLM.Categorias` y `CartaDigitalLM.Menu`
+- tablas de menus compuestos: `CartaDigitalLM.Menus`, `Menus_programacion`, `Menus_campos`, `Menus_campos_platos`
 - vista publica: `CartaDigitalLM.Perfil_publico`
 - bucket de storage: `imenu`
 
@@ -52,8 +53,9 @@ La funcion RPC no existe en `public` o no tiene `grant execute`.
 
 1. Verifica en Supabase API Settings que `CartaDigitalLM` esta expuesto.
 2. Ejecuta [setup-carta-digital.sql](</c:/Users/Maestry/Desktop/iCreate LOCAL/iMenu/supabase/setup-carta-digital.sql>).
-3. Ejecuta [bar-tropical-template.sql](</c:/Users/Maestry/Desktop/iCreate LOCAL/iMenu/supabase/bar-tropical-template.sql>) si quieres cargar la demo.
-4. Publica el repo para que GitHub Pages sirva `public/demo/bar-tropical`.
+3. Ejecuta [setup-menus-compuestos.sql](</c:/Users/Maestry/Desktop/iCreate LOCAL/iMenu/supabase/setup-menus-compuestos.sql>) si quieres habilitar la cuarta pestana `Menus`.
+4. Ejecuta [bar-tropical-template.sql](</c:/Users/Maestry/Desktop/iCreate LOCAL/iMenu/supabase/bar-tropical-template.sql>) si quieres cargar la demo.
+5. Publica el repo para que GitHub Pages sirva `public/demo/bar-tropical`.
 
 ## Que deja configurado `setup-carta-digital.sql`
 
@@ -167,4 +169,5 @@ Si quieres, esto se puede separar luego en otro SQL dedicado a storage.
 ## Archivos utiles
 
 - [setup-carta-digital.sql](</c:/Users/Maestry/Desktop/iCreate LOCAL/iMenu/supabase/setup-carta-digital.sql>)
+- [setup-menus-compuestos.sql](</c:/Users/Maestry/Desktop/iCreate LOCAL/iMenu/supabase/setup-menus-compuestos.sql>)
 - [bar-tropical-template.sql](</c:/Users/Maestry/Desktop/iCreate LOCAL/iMenu/supabase/bar-tropical-template.sql>)

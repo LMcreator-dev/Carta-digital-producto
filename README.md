@@ -1,4 +1,4 @@
-# iMenu
+# CartaDigitalLM
 
 Carta digital para bares y restaurantes con panel de administracion en Astro y backend en Supabase.
 
