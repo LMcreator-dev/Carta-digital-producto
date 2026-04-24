@@ -31,6 +31,15 @@ html {
     --accent-ink: #0a0a0a;
     --text: #f3f3f3;
     --muted: #b6b6b6;
+    --field-strong-bg: #111111;
+    --media-preview-bg: #101010;
+    --media-preview-image-bg: #0f0f0f;
+    --media-pill-bg: rgba(0, 0, 0, 0.18);
+    --media-pill-border: rgba(255, 255, 255, 0.16);
+    --media-pill-text: rgba(255, 255, 255, 0.9);
+    --media-meta-text: #e6e6e6;
+    --code-bg: #111111;
+    --code-text: #ffffff;
     --radius: 14px;
     --font-ui: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
     --font-display: "Sora", "Manrope", "Segoe UI", system-ui, sans-serif;
@@ -52,6 +61,15 @@ body {
     --border: #d4ddeb;
     --text: #111827;
     --muted: #5f6f86;
+    --field-strong-bg: #f6f8fc;
+    --media-preview-bg: #eef3fa;
+    --media-preview-image-bg: #f5f8fc;
+    --media-pill-bg: rgba(17, 24, 39, 0.06);
+    --media-pill-border: rgba(17, 24, 39, 0.14);
+    --media-pill-text: #334155;
+    --media-meta-text: #1f2937;
+    --code-bg: #f3f6fb;
+    --code-text: #1f2937;
 }
 
 :root[data-admin-theme="light"] .admin-container {
@@ -97,11 +115,50 @@ body {
     border-color: rgba(17, 24, 39, 0.1);
 }
 
+:root[data-admin-theme="light"] .admin-page .form-box,
+:root[data-admin-theme="light"] .content-card {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(17, 24, 39, 0.1);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        0 10px 26px rgba(15, 23, 42, 0.1);
+}
+
+:root[data-admin-theme="light"] .admin-tabs .tab {
+    color: #4b5f7c;
+}
+
+:root[data-admin-theme="light"] .admin-tabs .tab:hover {
+    color: #182336;
+}
+
 :root[data-admin-theme="light"] .theme-preview,
 :root[data-admin-theme="light"] .image-preview--media {
     background:
         radial-gradient(circle at top, rgba(17, 24, 39, 0.05), transparent 45%),
         #f7f9fc;
+}
+
+:root[data-admin-theme="light"] .theme-preview {
+    border-color: rgba(17, 24, 39, 0.1);
+}
+
+:root[data-admin-theme="light"] .theme-preview__top {
+    border-bottom-color: rgba(17, 24, 39, 0.08);
+}
+
+:root[data-admin-theme="light"] .theme-preview__line {
+    background: rgba(17, 24, 39, 0.12);
+}
+
+:root[data-admin-theme="light"] .theme-preview__line--short {
+    background: linear-gradient(90deg, var(--accent), rgba(17, 24, 39, 0.16));
+}
+
+:root[data-admin-theme="light"] .appearance-grid__picker,
+:root[data-admin-theme="light"] .profile-business-group .field {
+    background: rgba(239, 244, 252, 0.86);
+    border-color: rgba(17, 24, 39, 0.12);
 }
 
 :root[data-admin-theme="light"] .form-box input[readonly] {
@@ -511,7 +568,7 @@ button:active,
 }
 .edit-aside-title {
     font-weight: 800;
-    color: #fff;
+    color: var(--text);
     opacity: 0.9;
     margin-bottom: 10px;
 }
@@ -536,7 +593,7 @@ button:active,
 .edit-aside-name {
     font-size: 16px;
     font-weight: 800;
-    color: #fff;
+    color: var(--text);
     line-height: 1.1;
 }
 .edit-aside-tags {
@@ -548,9 +605,9 @@ button:active,
     font-size: 12px;
     padding: 4px 8px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    background: rgba(0, 0, 0, 0.18);
-    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid var(--media-pill-border);
+    background: var(--media-pill-bg);
+    color: var(--media-pill-text);
 }
 .edit-main {
     min-width: 0;
@@ -580,7 +637,7 @@ button:active,
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
-    background: #101010;
+    background: var(--media-preview-bg);
 }
 .image-preview img {
     width: 100%;
@@ -605,7 +662,7 @@ button:active,
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #0f0f0f;
+    background: var(--media-preview-image-bg);
 }
 
 #perfilLogoPreview {
@@ -618,7 +675,7 @@ button:active,
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #0f0f0f;
+    background: var(--media-preview-image-bg);
 }
 
 #platoImagenPreview {
@@ -630,7 +687,7 @@ button:active,
     width: 100%;
     height: 100%;
     object-fit: contain;
-    background: #0f0f0f;
+    background: var(--media-preview-image-bg);
 }
 
 @media (max-width: 640px) {
@@ -1587,7 +1644,9 @@ h1 svg {
     position: relative;
     max-width: 760px;
     margin: 7vh auto 0;
-    background: #fff;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
     border-radius: 16px;
     padding: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
@@ -1599,11 +1658,22 @@ h1 svg {
     gap: 12px;
 }
 .imodal-close {
-    border: 0;
-    background: #f2f2f2;
+    border: 1px solid var(--border);
+    background: var(--panel-3);
+    color: var(--text);
     border-radius: 10px;
     padding: 8px 10px;
     cursor: pointer;
+}
+
+.place-result-code {
+    display: block;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--code-bg);
+    color: var(--code-text);
+    overflow: auto;
 }
 
 .imodal-card--gallery {
@@ -1676,13 +1746,13 @@ h1 svg {
     aspect-ratio: 4 / 3;
     object-fit: cover;
     border-radius: 8px;
-    background: #0f0f0f;
+    background: var(--media-preview-image-bg);
 }
 
 .plato-gallery-name {
     display: block;
     font-size: 12px;
-    color: #e6e6e6;
+    color: var(--media-meta-text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -2398,7 +2468,7 @@ h1 svg {
     margin: 0;
     font-size: 17px;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--text);
     line-height: 1.2;
 }
 
@@ -2640,7 +2710,7 @@ h1 svg {
 #platoSubcategoria {
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 26%),
-        #111111;
+        var(--field-strong-bg);
 }
 
 .content-card--placeholder {
@@ -2679,7 +2749,7 @@ h1 svg {
 .menu-row-title {
     font-size: 20px;
     font-weight: 800;
-    color: #ffffff;
+    color: var(--text);
 }
 
 .menu-row-desc {
@@ -2752,7 +2822,7 @@ h1 svg {
 .imodal-card--menu-picker .field > label,
 .imodal-card--menu-editor label,
 .imodal-card--menu-picker label {
-    color: #e6e6e6;
+    color: var(--text);
     font-size: 13px;
     font-weight: 700;
 }
@@ -2776,7 +2846,7 @@ h1 svg {
 
 .imodal-card--menu-editor input::placeholder,
 .imodal-card--menu-picker input::placeholder {
-    color: rgba(255, 255, 255, 0.42);
+    color: var(--muted);
 }
 
 .imodal-card--menu-editor input:not([type="checkbox"]):focus,

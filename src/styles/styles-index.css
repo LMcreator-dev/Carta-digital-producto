@@ -574,12 +574,12 @@ button:active,
 .floatingCta{
   position:fixed; left:50%; transform:translateX(-50%);
   bottom:16px; z-index:40;
-  background:#1b1b1b; color:#fff;
-  border:0; border-radius:999px;
+  background:var(--accent); color:var(--accent-ink);
+  border:1px solid var(--frame-border); border-radius:999px;
   padding:14px 18px;
   display:flex; align-items:center; gap:10px;
   font-weight:800;
-  box-shadow:0 10px 24px rgba(0,0,0,.28);
+  box-shadow:0 10px 24px var(--accent-shadow);
 }
 .ctaIcon{display:inline-block; width:18px; text-align:center}
 
@@ -713,18 +713,18 @@ button:active,
 .barRow{display:grid; grid-template-columns:78px 1fr 34px; gap:10px; align-items:center}
 .barLabel{color:var(--muted); font-weight:800; font-size:13px}
 .barTrack{height:6px; border-radius:999px; background:var(--chip); overflow:hidden}
-.barFill{height:100%; width:50%; background:#f4c542}
+.barFill{height:100%; width:50%; background:var(--accent)}
 .barVal{text-align:right; font-weight:800; color:var(--text); font-size:13px; font-variant-numeric:tabular-nums lining-nums}
 
 .sheetActions{margin-top:14px; display:flex; justify-content:center}
 .primaryBtn{
   appearance:none;
-  border:0;
+  border:1px solid var(--frame-border);
   border-radius:999px;
   padding:12px 16px;
   font-weight:900;
-  background:#111;
-  color:#fff;
+  background:var(--accent);
+  color:var(--accent-ink);
 }
 
 .sheetHeader--menu {
